@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <title>Noto Emoji 轉換小工具</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- 載入 Google Noto Emoji -->
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Noto+Emoji&display=swap">
+
+  <style>
+    :root {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+                   sans-serif;
+      background: #f5f5f7;
+      color: #222;
+    }
+    body {
+      margin: 0;
+      padding: 16px;
+    }
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px 16px 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    }
+    h1 {
+      font-size: 20px;
+      margin: 0 0 4px;
+      text-align: center;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: #666;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    label {
+      font-size: 14px;
+      font-weight: 600;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .input-area {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .input-box {
+      flex: 1;
+      padding: 10px 12px;
+      font-size: 18px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      outline: none;
+    }
+    .input-box:focus {
+      border-color: #999;
+    }
+    .btn {
+      padding: 0 12px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      background: #f5f5f7;
+      font-size: 13px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .btn-primary {
+      border-color: #222;
+      background: #222;
+      color: #fff;
+    }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .btn-row .btn {
+      flex: 1;
+      text-align: center;
+      padding-top: 8px;
+      padding-bottom: 8px;
+    }
+    .preview-card {
+      margin-top: 8px;
+      border-radius: 12px;
+      border: 1px dashed #ddd;
+      padding: 12px;
+      background: #fafafa;
+      text-align: center;
+    }
+    .preview-label {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+    .emoji-output {
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      font-family: "Noto Emoji", system-ui, sans-serif;
+      font-size: 56px;
+      line-height: 1.2;
+      white-space: nowrap;     /* 不換行 */
+      overflow-x: auto;        /* 視覺上可左右捲動 */
+      overflow-y: hidden;
+    }
+    .hint {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #777;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Noto Emoji 轉換小工具</h1>
+    <p class="subtitle">輸入 / 貼上 iOS Emoji，下方會用 Google Noto Emoji 顯示，並可將預覽區塊截圖下載。</p>
+
+    <label for="emoji-input">輸入 emoji：</label>
+    <div class="input-area">
+      <input id="emoji-input" class="input-box" placeholder="例如：🥹 🫶 😆" autofocus>
+      <button class="btn" id="clear-btn" type="button">清除</button>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="capture-btn" type="button">
+        下載預覽截圖
+      </button>
+    </div>
+
+    <div class="preview-card" id="preview-card">
+      <div class="preview-label">Noto Emoji 預覽：</div>
+      <div id="emoji-output" class="emoji-output">🙂</div>
+    </div>
+
+    <p class="hint">
+      ● 預覽區的 emoji 不會自動換行，若太長可左右捲動查看。<br>
+      ● 「下載預覽截圖」會把整個灰色框內的完整內容（包含看不到但可捲動的部分）變成一張圖片下載。
+    </p>
+  </div>
+
+  <!-- html2canvas 用來截圖 DOM 區塊 -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <script>
+    const input = document.getElementById('emoji-input');
+    const output = document.getElementById('emoji-output');
+    const clearBtn = document.getElementById('clear-btn');
+    const captureBtn = document.getElementById('capture-btn');
+    const previewCard = document.getElementById('preview-card');
+
+    function updateOutput() {
+      const value = input.value.trim();
+      output.textContent = value || '🙂';
+    }
+
+    input.addEventListener('input', updateOutput);
+
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      updateOutput();
+      input.focus();
+    });
+
+    // 截圖預覽區塊（包含被捲動隱藏的 emoji）
+    captureBtn.addEventListener('click', () => {
+      // 記住原本樣式
+      const originalOutputWidth = output.style.width;
+      const originalOutputOverflowX = output.style.overflowX;
+      const originalPreviewWidth = previewCard.style.width;
+
+      // 讓 output 變成「完整內容寬度」且不裁切
+      const fullWidth = output.scrollWidth || output.offsetWidth;
+      output.style.width = fullWidth + 'px';
+      output.style.overflowX = 'visible';
+
+      // 讓整個卡片跟著內容變寬
+      previewCard.style.width = (fullWidth + 24) + 'px'; // 24 大約是左右 padding + 邊框
+
+      html2canvas(previewCard, {
+        scale: 2,
+        useCORS: true
+      }).then(canvas => {
+        // 還原樣式
+        output.style.width = originalOutputWidth;
+        output.style.overflowX = originalOutputOverflowX;
+        previewCard.style.width = originalPreviewWidth;
+
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = 'emoji_preview.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }).catch(err => {
+        console.error(err);
+        // 出錯時也要還原
+        output.style.width = originalOutputWidth;
+        output.style.overflowX = originalOutputOverflowX;
+        previewCard.style.width = originalPreviewWidth;
+        alert('截圖時發生錯誤，請再試一次。');
+      });
+    });
+
+    updateOutput();
+  </script>
+</body>
+</html>
